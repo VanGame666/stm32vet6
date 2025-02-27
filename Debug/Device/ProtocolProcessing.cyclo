@@ -1,0 +1,12 @@
+../Device/ProtocolProcessing.c:11:10:CharReverse16	1
+../Device/ProtocolProcessing.c:17:10:CharReverse32	1
+../Device/ProtocolProcessing.c:24:6:frame_send	4
+../Device/ProtocolProcessing.c:46:6:CMD_ReadScreen	1
+../Device/ProtocolProcessing.c:55:6:CMD_SwitchScreen	1
+../Device/ProtocolProcessing.c:67:6:CMD_SetButtonStatus	1
+../Device/ProtocolProcessing.c:83:6:CMD_ReadButtonStatus	1
+../Device/ProtocolProcessing.c:100:5:head_verification	3
+../Device/ProtocolProcessing.c:109:5:tail_verification	3
+../Device/ProtocolProcessing.c:119:6:rx_resend	2
+../Device/ProtocolProcessing.c:174:6:instruction_decode	4
+../Device/ProtocolProcessing.c:206:6:instruction_code	4

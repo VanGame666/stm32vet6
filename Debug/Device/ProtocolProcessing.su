@@ -1,0 +1,12 @@
+../Device/ProtocolProcessing.c:11:10:CharReverse16	16	static
+../Device/ProtocolProcessing.c:17:10:CharReverse32	16	static
+../Device/ProtocolProcessing.c:24:6:frame_send	56	dynamic
+../Device/ProtocolProcessing.c:46:6:CMD_ReadScreen	16	static
+../Device/ProtocolProcessing.c:55:6:CMD_SwitchScreen	24	static
+../Device/ProtocolProcessing.c:67:6:CMD_SetButtonStatus	24	static
+../Device/ProtocolProcessing.c:83:6:CMD_ReadButtonStatus	24	static
+../Device/ProtocolProcessing.c:100:5:head_verification	16	static
+../Device/ProtocolProcessing.c:109:5:tail_verification	16	static
+../Device/ProtocolProcessing.c:119:6:rx_resend	16	static
+../Device/ProtocolProcessing.c:174:6:instruction_decode	16	static
+../Device/ProtocolProcessing.c:206:6:instruction_code	16	static
