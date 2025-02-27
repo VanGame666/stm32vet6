@@ -86,7 +86,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart == &huart1)
     {
-    	rx_num = Size;
+    	rx_buffer[0] = Size;
     	HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_2);
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rx_buffer,BUF_SIZE);
         __HAL_DMA_DISABLE_IT(&hdma_usart1_rx,DMA_IT_HT);
@@ -145,17 +145,11 @@ int main(void)
   {
 	  HAL_Delay(1000);
 	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
-	  if(rx_num != 0)
-	  {
-		  rx_resend();
-		  instruction_decode();
-		  rx_num = 0;
-	  }
+	  if(AT24CXX_WriteBuff[0] != 0){AT24CXX_WriteBuff[0] = 0;}
 
 	  if(at24_flag == 1)
 	  {
 		  at24_flag = 0;
-		  AT24C02_Func();
 		  CMD_ReadButtonStatus(64,23);
 	  }
     /* USER CODE END WHILE */

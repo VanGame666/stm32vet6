@@ -1,42 +1,44 @@
 #include "AT24C02.h"
 
 
-static uint8_t AT24CXX_ReadBuff[AT24CXX_BUFF_SIZE];
-static uint8_t AT24CXX_WriteBuff[AT24CXX_BUFF_SIZE];
+uint8_t AT24CXX_ReadBuff[AT24CXX_BUFF_SIZE];
+uint8_t AT24CXX_WriteBuff[AT24CXX_BUFF_SIZE];
+
+uint8_t record_head;
+uint8_t record_tail;
 
 
-struct StateInfo loginfo;
-struct StateInfo loginfo_a;
+FaultHeader_t FaultHeader;
+FaultRecord_t FaultRecord;
 
 
 
 
 
-
-void struct_decode(void)
+void struct_regist(void)
 {
-	struct StateInfo *pStates = (struct StateInfo*)AT24CXX_ReadBuff;
+	FaultHeader_t *pStates = (FaultHeader_t*)AT24CXX_ReadBuff[1];
 
-	loginfo_a.time = pStates->time;
-	loginfo_a.data = pStates->data;
-	loginfo_a.frequency = pStates->frequency;
-	loginfo_a.voltage = pStates->voltage;
-	loginfo_a.current = pStates->current;
+	FaultHeader.err_time = pStates->err_time;
+	FaultHeader.err_data = pStates->err_data;
+	FaultHeader.fault_count = pStates->fault_count;
+	FaultHeader.read_addr = pStates->read_addr;
+	FaultHeader.write_addr = pStates->write_addr;
 }
 
 void time_decode(void)
 {
-	uint8_t time_hour =  (loginfo_a.time & 0xFF00) >> 8;
-	uint8_t time_min =  (loginfo_a.time & 0x00ff);
+	uint8_t time_hour =  (FaultHeader.err_time & 0xFF00) >> 8;
+	uint8_t time_min =  (FaultHeader.err_time & 0x00ff);
 	printf("now time:hour %d min: %d\r\n",time_hour,time_min);
 }
 
 
 void data_decode(void)
 {
-	uint8_t data_year =  (loginfo_a.data & 0xFE00) >> 9;
-	uint8_t data_month =  (loginfo_a.data & 0x01E0) >> 5;
-	uint8_t data_day =  (loginfo_a.data & 0x001F);
+	uint8_t data_year =  (FaultHeader.err_data & 0xFE00) >> 9;
+	uint8_t data_month =  (FaultHeader.err_data & 0x01E0) >> 5;
+	uint8_t data_day =  (FaultHeader.err_data & 0x001F);
 	printf("now data:year %d month: %d day: %d\r\n",data_year+1980,data_month,data_day);
 }
 
@@ -61,128 +63,175 @@ uint16_t data_code(uint8_t year,uint8_t month,uint8_t day)
 }
 
 
-void AT24TwiceWrite(int pos,struct StateInfo structsend,int index)
+void AT24Write(int position,void* pstruct,int index)
 {
-	HAL_I2C_Mem_Write(&hi2c1, AT24CXX_Write_ADDR,pos,I2C_MEMADD_SIZE_8BIT, (uint8_t*)&structsend+index,1,1000);
+	HAL_I2C_Mem_Write(&hi2c1, AT24CXX_Write_ADDR,position,I2C_MEMADD_SIZE_8BIT, (uint8_t*)pstruct+index,1,1000);
 	HAL_Delay(10);
-	HAL_I2C_Mem_Write(&hi2c1, AT24CXX_Write_ADDR,128+pos,I2C_MEMADD_SIZE_8BIT, (uint8_t*)&structsend+index,1,1000);
+	HAL_I2C_Mem_Write(&hi2c1, AT24CXX_Write_ADDR,128+position,I2C_MEMADD_SIZE_8BIT, (uint8_t*)pstruct+index,1,1000);
 	HAL_Delay(10);
 }
 
 
-
-
-void write_fault_record(FaultRecord record)
+void AT24Read(int position,void* pstruct,int index)
 {
-    uint8_t next_end = FaultHeader.end_addr + sizeof(FaultRecord);
-    if (next_end >= FAULT_STORAGE_END) { // 环形回绕
-        next_end = FAULT_STORAGE_START;
-    }
+	HAL_I2C_Mem_Read(&hi2c1, AT24CXX_Read_ADDR,position,I2C_MEMADD_SIZE_8BIT, (uint8_t*)pstruct+index,1,1000);
+}
 
-	  for(int j = 0;j<sizeof(record);j++)
+void write_fault_header(FaultHeader_t* header)
+{
+	header->CRCheck = Soft_CRC_Calculate(header,sizeof(FaultHeader_t)-4);
+	  for(int j = 0;j<sizeof(FaultHeader_t);j++)
 	  {
-	    	AT24TwiceWrite(FaultRecord_ADD + next_end,record,j);
+		  AT24Write(FaultHeader_START,header,j);
 	  }
-
-
-
-    // 3. 检查缓冲区是否满
-    if (header.fault_count * sizeof(FaultRecord) > FAULT_STORAGE_SIZE) {
-        header.start_addr += sizeof(FaultRecord);
-        if (header.start_addr >= FAULT_STORAGE_END) {
-            header.start_addr = FAULT_STORAGE_START;
-        }
-    }
-
-    // 4. 写入故障记录到A区
-    eeprom_write(header.end_addr, &record, sizeof(FaultRecord));
-    header.end_addr = next_end;
-
-    // 5. 更新统计信息头并备份到B区
-    update_header_crc(&header);
-    eeprom_write(A_HEADER_START, &header, sizeof(FaultHeader));
-    backup_to_b_zone();
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void AT24C02_Func(void)
+void read_fault_header(FaultHeader_t* header)
 {
-	loginfo.time = time_code(12,31);
-	loginfo.data = data_code(2025,2,26);
-	loginfo.frequency = 0x3421;
-	loginfo.voltage = 0x2222;
-	loginfo.current = 0x2222;
-	loginfo.crcheck = Soft_CRC_Calculate(&loginfo,sizeof(loginfo)-4);
-
-	printf("crc %8x\r\n",loginfo.crcheck);
-
-    for(int j = 0;j<sizeof(loginfo);j++)
-    {
-    	AT24TwiceWrite(j,loginfo,j);
-    }
-
-//    HAL_I2C_Mem_Write(&hi2c1, AT24CXX_Write_ADDR,128+9,I2C_MEMADD_SIZE_8BIT, (uint8_t*)&loginfo+1,1,1000);
-
-
-    HAL_I2C_Mem_Read(&hi2c1, AT24CXX_Read_ADDR,0,I2C_MEMADD_SIZE_8BIT, (uint8_t*)AT24CXX_ReadBuff,sizeof(loginfo),0xFF);
-    for(int idx = 0; idx < sizeof(loginfo); idx++) {
-    	printf("Struct Maininfo = %2x \r\n",AT24CXX_ReadBuff[idx]);
-    }
-    if(Soft_CRC_Calculate(AT24CXX_ReadBuff,sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4])
-    {
-    	printf("crc main check success\r\n");
-    }
-	printf("crc calc %8x\r\n",Soft_CRC_Calculate(AT24CXX_ReadBuff,sizeof(loginfo)-4));
-	printf("crc read %8x\r\n",*(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4]);
-
-
-    HAL_I2C_Mem_Read(&hi2c1, AT24CXX_Read_ADDR,128,I2C_MEMADD_SIZE_8BIT, (uint8_t*)AT24CXX_ReadBuff+128,sizeof(loginfo),0xFF);
-    for(int idx = 0; idx < sizeof(loginfo); idx++) {
-    	printf("Struct Subinfo = %2x \r\n",AT24CXX_ReadBuff[128+idx]);
-    }
-    if(Soft_CRC_Calculate(&AT24CXX_ReadBuff[128],sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4])
-    {
-    	printf("crc sub check success\r\n");
-    }
-	printf("crc calc %8x\r\n",Soft_CRC_Calculate(AT24CXX_ReadBuff+128,sizeof(loginfo)-4));
-	printf("crc read %8x\r\n",*(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4]);
-
-
-    struct_decode();
-    time_decode();
-    data_decode();
-
+	  for(int j = 0;j<sizeof(FaultHeader_t);j++)
+	  {
+	    	AT24Read(FaultHeader_START,header,j);
+	  }
 }
+
+
+void write_fault_record(FaultRecord_t* record)
+{
+	uint8_t i,j;
+	uint16_t ring_next_write = FaultHeader.write_addr + sizeof(FaultRecord_t);
+	if(ring_next_write >= FaultRecord_END)
+	{
+		for(j = 0;j<sizeof(FaultRecord_t)-(ring_next_write-FaultRecord_END);j++)
+		{
+		  AT24Write(FaultHeader.write_addr + j,record,j);
+		}
+
+		for(i = 0;i<(ring_next_write-FaultRecord_END);j++,i++)
+		{
+		  AT24Write(FaultRecord_START + i,record,j);
+		  if(FaultRecord_START + i > FaultHeader.read_addr)
+		  {
+			  FaultHeader.read_addr = FaultHeader.read_addr + sizeof(FaultRecord_t);
+			  if(FaultHeader.read_addr >= FaultRecord_END)
+			  {
+				  FaultHeader.read_addr = FaultRecord_START+(FaultHeader.read_addr - FaultRecord_END);
+			  }
+		  }
+		}
+		FaultHeader.write_addr = FaultRecord_START + i;
+		write_fault_header(&FaultHeader);
+	}else{
+		for(j = 0;j<sizeof(record);j++)
+		{
+		  AT24Write(FaultHeader.write_addr + j,record,j);
+		}
+		FaultHeader.write_addr = FaultHeader.write_addr + j;
+		write_fault_header(&FaultHeader);
+	}
+}
+
+
+uint8_t read_fault_record(FaultRecord_t* record)
+{
+	uint8_t i,j;
+	if(FaultHeader.read_addr == FaultHeader.write_addr){printf("read empty\r\n");return 0;}
+	uint16_t ring_next_read = FaultHeader.read_addr + sizeof(FaultRecord_t);
+	if(ring_next_read >= FaultRecord_END)
+	{
+		for(j = 0;j<sizeof(FaultRecord_t)-(ring_next_read-FaultRecord_END);j++)
+		{
+		  AT24Read(FaultHeader.read_addr + j,record,j);
+		}
+
+		for(i = 0;i<(ring_next_read-FaultRecord_END);j++,i++)
+		{
+			AT24Read(FaultRecord_START + i,record,j);
+		}
+		FaultHeader.read_addr = FaultRecord_START + i;
+		write_fault_header(&FaultHeader);
+	}else{
+		for(j = 0;j<sizeof(FaultRecord_t);j++)
+		{
+			AT24Read(FaultHeader.read_addr + j,record,j);
+		}
+		FaultHeader.read_addr = FaultHeader.read_addr + j;
+		write_fault_header(&FaultHeader);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//void AT24C02_Func(void)
+//{
+//	loginfo.time = time_code(12,31);
+//	loginfo.data = data_code(2025,2,26);
+//	loginfo.frequency = 0x3421;
+//	loginfo.voltage = 0x2222;
+//	loginfo.current = 0x2222;
+//	loginfo.crcheck = Soft_CRC_Calculate(&loginfo,sizeof(loginfo)-4);
+//
+//	printf("crc %8x\r\n",loginfo.crcheck);
+//
+//    for(int j = 0;j<sizeof(loginfo);j++)
+//    {
+//    	AT24TwiceWrite(j,loginfo,j);
+//    }
+//
+////    HAL_I2C_Mem_Write(&hi2c1, AT24CXX_Write_ADDR,128+9,I2C_MEMADD_SIZE_8BIT, (uint8_t*)&loginfo+1,1,1000);
+//
+//
+//    HAL_I2C_Mem_Read(&hi2c1, AT24CXX_Read_ADDR,0,I2C_MEMADD_SIZE_8BIT, (uint8_t*)AT24CXX_ReadBuff,sizeof(loginfo),0xFF);
+//    for(int idx = 0; idx < sizeof(loginfo); idx++) {
+//    	printf("Struct Maininfo = %2x \r\n",AT24CXX_ReadBuff[idx]);
+//    }
+//    if(Soft_CRC_Calculate(AT24CXX_ReadBuff,sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4])
+//    {
+//    	printf("crc main check success\r\n");
+//    }
+//	printf("crc calc %8x\r\n",Soft_CRC_Calculate(AT24CXX_ReadBuff,sizeof(loginfo)-4));
+//	printf("crc read %8x\r\n",*(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4]);
+//
+//
+//    HAL_I2C_Mem_Read(&hi2c1, AT24CXX_Read_ADDR,128,I2C_MEMADD_SIZE_8BIT, (uint8_t*)AT24CXX_ReadBuff+128,sizeof(loginfo),0xFF);
+//    for(int idx = 0; idx < sizeof(loginfo); idx++) {
+//    	printf("Struct Subinfo = %2x \r\n",AT24CXX_ReadBuff[128+idx]);
+//    }
+//    if(Soft_CRC_Calculate(&AT24CXX_ReadBuff[128],sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4])
+//    {
+//    	printf("crc sub check success\r\n");
+//    }
+//	printf("crc calc %8x\r\n",Soft_CRC_Calculate(AT24CXX_ReadBuff+128,sizeof(loginfo)-4));
+//	printf("crc read %8x\r\n",*(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4]);
+//
+//
+//    struct_decode();
+//    time_decode();
+//    data_decode();
+//
+//}
 
 
 

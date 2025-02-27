@@ -14,7 +14,7 @@
 
 /*! -------------------------------------------------------------------------- */
 /*! Public test functions prototype */
-#define AT24CXX_BUFF_SIZE  256
+#define AT24CXX_BUFF_SIZE  128
 
 #define AT24CXX_Write_ADDR 0xA0
 #define AT24CXX_Read_ADDR  0xA1
@@ -22,26 +22,25 @@
 #define AT24CXX_MAX_SIZE   256
 #define AT24CXX_PAGE_SIZE  8
 #define AT24CXX_PAGE_TOTAL (AT24CXX_MAX_SIZE/AT24CXX_PAGE_SIZE)
-#define FaultHeader_ADD 0
-#define FaultRecord_ADD 16
 
-struct StateInfo{
-	 uint16_t time;
-	 uint16_t data;
-	 uint16_t frequency;
-	 uint16_t voltage;
-	 uint16_t current;
-	 uint32_t crcheck;
-};
+#define FaultHeader_START 0
+#define FaultRecord_START 16
+#define FaultRecord_END 128
+
+
+ extern uint8_t AT24CXX_ReadBuff[];
+ extern uint8_t AT24CXX_WriteBuff[];
+
+
 
 typedef struct{		//对其16bytes
-	uint16_t fault_count;
+	uint16_t err_time;
 	uint16_t err_data;
-	uint16_t err_times;
-	uint16_t start_addr;
-	uint16_t end_addr;
-	uint32_t head_CRCheck;
-}FaultHeader;
+	uint16_t fault_count;
+	uint16_t read_addr;
+	uint16_t write_addr;
+	uint32_t CRCheck;
+}FaultHeader_t;
 
 typedef struct{  //32bytes
 	uint16_t freq;
@@ -63,7 +62,7 @@ typedef struct{  //32bytes
 	uint8_t adc3_err_code;
 	uint8_t adc4_err_code;
 	uint8_t adc5_err_code;
-}FaultRecord;
+}FaultRecord_t;
 
 #endif
 

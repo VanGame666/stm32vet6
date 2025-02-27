@@ -8,24 +8,31 @@
 #include "usart.h"
 
 #define BUF_SIZE 128
-#define HEAD_SIZE 1
-#define TAIL_SIZE 4
-#define DATA_BUFF_SIZE 21
+
 
 extern uint8_t rx_buffer[BUF_SIZE];
 extern uint8_t tx_buffer[BUF_SIZE];
-extern uint8_t rx_num,tx_num;
 
 
-extern uint8_t frame_head[HEAD_SIZE];
-extern uint8_t frame_tail[TAIL_SIZE];
-extern uint8_t frame_data[DATA_BUFF_SIZE];
 
-void frame_send(uint8_t* frame_data);
-void rx_resend(void);
+void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size);
+void pc_rx_process(void);
 void instruction_decode(void);
 void instruction_code(void);
 void CMD_ReadScreen(void);
+
+typedef struct{
+	uint8_t mode;
+	uint8_t data_len;
+	uint8_t addr_L;
+	uint8_t addr_H;
+	uint8_t addr_num_L;
+	uint8_t addr_num_H;
+	uint32_t CRC_Check;
+}PC_Conect_t;
+
+
+
 
 
 #endif
