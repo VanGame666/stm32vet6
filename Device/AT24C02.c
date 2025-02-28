@@ -4,15 +4,8 @@
 uint8_t AT24CXX_ReadBuff[AT24CXX_BUFF_SIZE];
 uint8_t AT24CXX_WriteBuff[AT24CXX_BUFF_SIZE];
 
-uint8_t record_head;
-uint8_t record_tail;
-
-
 FaultHeader_t FaultHeader;
 FaultRecord_t FaultRecord;
-
-
-
 
 
 void struct_regist(void)
@@ -161,8 +154,20 @@ uint8_t read_fault_record(FaultRecord_t* record)
 
 
 
+void BackupOverwrite(void)
+{
+	uint8_t i;
+	for(i = 0;i<128;i++)
+	{
+		AT24Read(128 + i,&AT24CXX_ReadBuff[1],i);
+	}
 
+	for(i = 0;i<128;i++)
+	{
+		AT24Write(i,&AT24CXX_ReadBuff[1],i);
+	}
 
+}
 
 
 

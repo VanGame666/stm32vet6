@@ -144,14 +144,17 @@ int main(void)
   while (1)
   {
 	  HAL_Delay(1000);
-	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
-	  if(AT24CXX_WriteBuff[0] != 0){AT24CXX_WriteBuff[0] = 0;}
-
-	  if(at24_flag == 1)
-	  {
-		  at24_flag = 0;
-		  CMD_ReadButtonStatus(64,23);
-	  }
+//	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
+//	  if(AT24CXX_WriteBuff[0] != 0){AT24CXX_WriteBuff[0] = 0;}
+	  printf("ce shi");
+//	  if(at24_flag == 1)
+//	  {
+//		  at24_flag = 0;
+//		  CMD_temp(1,0xd8e6);
+//		  HAL_Delay(1000);
+//		  CMD_temp(2,0xd9a6);
+//
+//	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -1,14 +1,13 @@
 #include "Protocolprocessing.h"
 
-uint8_t frame_head[] = {0xEE};
-uint8_t frame_tail[] = {0xFF,0xFC,0xFF,0xFF};
+uint8_t rx_buffer[BUF_SIZE]={0};
+uint8_t tx_buffer[BUF_SIZE]={0};
+
+uint8_t dacai_head[] = {0xEE};
+uint8_t dacai_tail[] = {0xFF,0xFC,0xFF,0xFF};
 
 uint8_t pc_head[] = {0x5A,0xA5};
 uint8_t pc_tail[] = {0xA5,0x5A};
-
-
-uint8_t rx_buffer[BUF_SIZE]={0};
-uint8_t tx_buffer[BUF_SIZE]={0};
 
 PC_Conect_t pc_connect;
 
@@ -33,18 +32,21 @@ void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
 	uint8_t i,j = 0;
 	for(i = 0;i < head_size;i++,j++)
 	{
-		frame[j] = head[j];
+		frame[j] = head[i];
 	}
 	for(i = 0;i < tx_buffer[0];i++,j++)
 	{
-		frame[j] = tx_buffer[1+j];
+		frame[j] = tx_buffer[1+i];
 	}
 	for(i = 0;i < tail_size;i++,j++)
 	{
-		frame[j] = tail[j];
+		frame[j] = tail[i];
 	}
-	HAL_UART_Transmit(&huart1,&frame,frame_size, 0xFFFF);
+	HAL_UART_Transmit(&huart6,&frame,frame_size, 0xFFFF);
 }
+
+
+
 
 # define HEAD_VERIFICATION(head) head_verification(head,sizeof(head))
 int head_verification(uint8_t* head,uint8_t head_size)
@@ -55,6 +57,7 @@ int head_verification(uint8_t* head,uint8_t head_size)
 	}
 	return 1;
 }
+
 
 
 # define TIAL_VERIFICATION(tail) tail_verification(tail,sizeof(tail))
@@ -75,8 +78,10 @@ void CMD_ReadScreen(void)
 	cmd  = CharReverse16(0xB101);
 	tx_buffer[0] = sizeof(cmd);
 	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
-	FRAME_SEND(frame_head,frame_tail);
+	FRAME_SEND(dacai_head,dacai_tail);
 }
+
+
 
 void CMD_SwitchScreen(uint16_t parameter)
 {
@@ -86,7 +91,7 @@ void CMD_SwitchScreen(uint16_t parameter)
 	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
 	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter));
 	tx_buffer[0] = sizeof(cmd) + sizeof(parameter);
-	FRAME_SEND(frame_head,frame_tail);
+	FRAME_SEND(dacai_head,dacai_tail);
 }
 
 
@@ -102,8 +107,9 @@ void CMD_SetButtonStatus(uint16_t parameter1,uint16_t parameter2,uint8_t paramet
 	memcpy(&tx_buffer[1+2+2+2],(uint8_t*)&parameter3,sizeof(parameter3));
 
 	tx_buffer[0] = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(parameter3);
-	FRAME_SEND(frame_head,frame_tail);
+	FRAME_SEND(dacai_head,dacai_tail);
 }
+
 
 
 void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2)
@@ -117,11 +123,11 @@ void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2)
 	memcpy(&tx_buffer[1+2+2],(uint8_t*)&param,sizeof(parameter2));
 
 	tx_buffer[0] = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2);
-	FRAME_SEND(frame_head,frame_tail);
+	FRAME_SEND(dacai_head,dacai_tail);
 }
 
 
-void PConectFrame()
+void PConectFrameSend(void)
 {
 	memcpy(&tx_buffer[1],(uint8_t*)&pc_connect,sizeof(PC_Conect_t));
 	tx_buffer[0] = sizeof(PC_Conect_t);
@@ -130,20 +136,13 @@ void PConectFrame()
 
 
 
-
-
-
-
-
-
-
-void pc_rx_process(void)
+void PConectFrameRceive(void)
 {
-	if(HEAD_VERIFICATION(frame_head))
+	if(HEAD_VERIFICATION(dacai_head))
 	{
-		if(TAIL_VERIFICATION(frame_tail))
+		if(TIAL_VERIFICATION(dacai_tail))
 		{
-			PC_Conect_t* pstruct = (PC_Conect_t*)&rx_buffer[sizeof(frame_head)+1];
+			PC_Conect_t* pstruct = (PC_Conect_t*)&rx_buffer[sizeof(dacai_head)+1];
 			pc_connect.mode = pstruct->mode;
 			pc_connect.data_len = pstruct->data_len;
 			pc_connect.addr_L = pstruct->addr_L;
@@ -152,7 +151,7 @@ void pc_rx_process(void)
 			pc_connect.addr_num_H = pstruct->addr_num_H;
 			pc_connect.CRC_Check = pstruct->CRC_Check;
 
-			printf("rx_data_num= %d \r\n",rx_buffer[0]-sizeof(frame_head)-sizeof(frame_tail));
+			printf("rx_data_num= %d \r\n",rx_buffer[0]-sizeof(dacai_head)-sizeof(dacai_tail));
 			for(int i = 0;i < rx_buffer[0];i++){printf("0x%2X ",rx_buffer[i+1]);}
 			printf("\r\n");
 		}
@@ -169,7 +168,19 @@ void pc_rx_process(void)
 
 
 
+void CMD_temp(uint16_t parameter1,uint16_t parameter2)
+{
+	uint16_t cmd,param;
+	cmd  = CharReverse16(0xB100);
+	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
+	param = CharReverse16(parameter1);
+	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter1));
+	param = CharReverse16(parameter2);
+	memcpy(&tx_buffer[1+2+2],(uint8_t*)&param,sizeof(parameter2));
 
+	tx_buffer[0] = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2);
+	FRAME_SEND(dacai_head,dacai_tail);
+}
 
 
 
@@ -195,7 +206,7 @@ void pc_rx_process(void)
 
 void instruction_decode(void)
 {
-	char data_index = sizeof(frame_head)-1;
+	char data_index = sizeof(dacai_head)-1;
 	if(rx_buffer[data_index+1] == 0xB1)
 	{
 		switch (rx_buffer[data_index+2])
@@ -219,35 +230,4 @@ void instruction_decode(void)
 	}
 }
 
-
-
-
-
-
-
-void instruction_code(void)
-{
-	char data_index = sizeof(frame_head)-1;
-	if(rx_buffer[data_index+1] == 0xB1)
-	{
-		switch (rx_buffer[data_index+2])
-		{
-			case 0x00:
-			case 0x01:		break;
-			case 0x02:		break;
-			case 0x03:printf("0x03  two cmd\r\n");		break;
-			case 0x04:		break;
-			default:break;
-		}
-	}else{
-		switch (rx_buffer[data_index+1])
-		{
-			case 0x01:		break;
-			case 0x02:		break;
-			case 0x03:		break;
-			case 0x04:printf("0x04  one cmd\r\n");		break;
-			default:break;
-		}
-	}
-}
 

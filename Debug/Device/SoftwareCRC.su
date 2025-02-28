@@ -1,1 +1,2 @@
-../Device/SoftwareCRC.c:5:10:Soft_CRC_Calculate	32	static
+../Device/SoftwareCRC.c:5:10:SoftCRC32	32	static
+../Device/SoftwareCRC.c:28:10:ModBusCRC16	32	static

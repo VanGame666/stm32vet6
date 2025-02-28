@@ -14,14 +14,11 @@
 
 /*! -------------------------------------------------------------------------- */
 /*! Public test functions prototype */
-#define AT24CXX_BUFF_SIZE  128
+#define AT24CXX_BUFF_SIZE  (128)
 
 #define AT24CXX_Write_ADDR 0xA0
 #define AT24CXX_Read_ADDR  0xA1
 
-#define AT24CXX_MAX_SIZE   256
-#define AT24CXX_PAGE_SIZE  8
-#define AT24CXX_PAGE_TOTAL (AT24CXX_MAX_SIZE/AT24CXX_PAGE_SIZE)
 
 #define FaultHeader_START 0
 #define FaultRecord_START 16

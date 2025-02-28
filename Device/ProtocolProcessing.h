@@ -7,7 +7,7 @@
 
 #include "usart.h"
 
-#define BUF_SIZE 128
+#define BUF_SIZE (128+1)
 
 
 extern uint8_t rx_buffer[BUF_SIZE];
@@ -20,6 +20,9 @@ void pc_rx_process(void);
 void instruction_decode(void);
 void instruction_code(void);
 void CMD_ReadScreen(void);
+void CMD_SwitchScreen(uint16_t parameter);
+void CMD_temp(uint16_t parameter1,uint16_t parameter2);
+
 
 typedef struct{
 	uint8_t mode;
