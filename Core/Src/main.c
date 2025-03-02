@@ -144,9 +144,12 @@ int main(void)
   while (1)
   {
 	  HAL_Delay(1000);
-//	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
+	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
 //	  if(AT24CXX_WriteBuff[0] != 0){AT24CXX_WriteBuff[0] = 0;}
-	  printf("ce shi");
+	  printf("ce shi\r\n");
+	  CMD_ReadButtonStatus(5,9);
+	  printf("\r\n");
+
 //	  if(at24_flag == 1)
 //	  {
 //		  at24_flag = 0;

@@ -32,7 +32,7 @@ uint16_t CharReverse16 (uint16_t data)
 	return (data & 0x00ff) << 8 | (data & 0xff00) >> 8;
 }
 
-uint32_t IEEECRC32(uint8_t* data, uint16_t len)
+uint32_t EthCRC32(uint8_t* data, uint16_t len)
 {
 	uint32_t CRC32 = 0xFFFFFFFF;
 	uint32_t POLY = BitReverse32(0x04C11DB7);

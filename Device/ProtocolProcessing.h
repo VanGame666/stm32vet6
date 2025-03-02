@@ -22,6 +22,7 @@ void instruction_decode(void);
 void instruction_code(void);
 void CMD_ReadScreen(void);
 void CMD_SwitchScreen(uint16_t parameter);
+void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2);
 
 
 typedef struct{

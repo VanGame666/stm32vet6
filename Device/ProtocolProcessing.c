@@ -179,9 +179,10 @@ void PConectRceive(void)
 
 void PConectSend(void)
 {
+	uint16_t i,crc16;
 
 	tx_buffer[0] = 0x81;
-	tx_buffer[1] = (pc_connect.addr_num + 1+1+2+2+2);
+	tx_buffer[1] = (pc_connect.addr_num + 1+1+2+2);
 	tx_buffer[2] = (pc_connect.addr&0x00FF);
 	tx_buffer[3] = (pc_connect.addr&0xFF00)>>8;
 
