@@ -28,15 +28,22 @@
  extern uint8_t AT24CXX_ReadBuff[];
  extern uint8_t AT24CXX_WriteBuff[];
 
+ typedef struct{		//12bytes
+ 	uint8_t hour;
+ 	uint8_t min;
+ 	uint8_t year;
+ 	uint8_t month;
+ 	uint8_t day;
+ }Time_t;
 
 
-typedef struct{		//对其16bytes
+typedef struct{		//12bytes
 	uint16_t err_time;
 	uint16_t err_data;
 	uint16_t fault_count;
 	uint16_t read_addr;
 	uint16_t write_addr;
-	uint32_t CRCheck;
+	uint16_t CRCheck;
 }FaultHeader_t;
 
 typedef struct{  //32bytes

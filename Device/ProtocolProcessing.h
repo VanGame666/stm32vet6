@@ -6,6 +6,7 @@
 #endif
 
 #include "usart.h"
+#include "SoftwareCRC.h"
 
 #define BUF_SIZE (128+1)
 
@@ -27,11 +28,9 @@ void CMD_temp(uint16_t parameter1,uint16_t parameter2);
 typedef struct{
 	uint8_t mode;
 	uint8_t data_len;
-	uint8_t addr_L;
-	uint8_t addr_H;
-	uint8_t addr_num_L;
-	uint8_t addr_num_H;
-	uint32_t CRC_Check;
+	uint8_t addr;
+	uint8_t addr_num;
+	uint16_t CRC16_Check;
 }PC_Conect_t;
 
 

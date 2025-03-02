@@ -72,7 +72,7 @@ void AT24Read(int position,void* pstruct,int index)
 
 void write_fault_header(FaultHeader_t* header)
 {
-	header->CRCheck = Soft_CRC_Calculate(header,sizeof(FaultHeader_t)-4);
+	header->CRCheck = IEEECRC32(header,sizeof(FaultHeader_t)-4);
 	  for(int j = 0;j<sizeof(FaultHeader_t);j++)
 	  {
 		  AT24Write(FaultHeader_START,header,j);
@@ -166,7 +166,6 @@ void BackupOverwrite(void)
 	{
 		AT24Write(i,&AT24CXX_ReadBuff[1],i);
 	}
-
 }
 
 
@@ -188,7 +187,8 @@ void BackupOverwrite(void)
 
 
 
-
+//
+//
 //void AT24C02_Func(void)
 //{
 //	loginfo.time = time_code(12,31);
@@ -196,7 +196,7 @@ void BackupOverwrite(void)
 //	loginfo.frequency = 0x3421;
 //	loginfo.voltage = 0x2222;
 //	loginfo.current = 0x2222;
-//	loginfo.crcheck = Soft_CRC_Calculate(&loginfo,sizeof(loginfo)-4);
+//	loginfo.crcheck = IEEECRC32(&loginfo,sizeof(loginfo)-4);
 //
 //	printf("crc %8x\r\n",loginfo.crcheck);
 //
@@ -212,11 +212,11 @@ void BackupOverwrite(void)
 //    for(int idx = 0; idx < sizeof(loginfo); idx++) {
 //    	printf("Struct Maininfo = %2x \r\n",AT24CXX_ReadBuff[idx]);
 //    }
-//    if(Soft_CRC_Calculate(AT24CXX_ReadBuff,sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4])
+//    if(IEEECRC32(AT24CXX_ReadBuff,sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4])
 //    {
 //    	printf("crc main check success\r\n");
 //    }
-//	printf("crc calc %8x\r\n",Soft_CRC_Calculate(AT24CXX_ReadBuff,sizeof(loginfo)-4));
+//	printf("crc calc %8x\r\n",IEEECRC32(AT24CXX_ReadBuff,sizeof(loginfo)-4));
 //	printf("crc read %8x\r\n",*(uint32_t*)&AT24CXX_ReadBuff[sizeof(loginfo)-4]);
 //
 //
@@ -224,11 +224,11 @@ void BackupOverwrite(void)
 //    for(int idx = 0; idx < sizeof(loginfo); idx++) {
 //    	printf("Struct Subinfo = %2x \r\n",AT24CXX_ReadBuff[128+idx]);
 //    }
-//    if(Soft_CRC_Calculate(&AT24CXX_ReadBuff[128],sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4])
+//    if(IEEECRC32(&AT24CXX_ReadBuff[128],sizeof(loginfo)-4) == *(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4])
 //    {
 //    	printf("crc sub check success\r\n");
 //    }
-//	printf("crc calc %8x\r\n",Soft_CRC_Calculate(AT24CXX_ReadBuff+128,sizeof(loginfo)-4));
+//	printf("crc calc %8x\r\n",IEEECRC32(AT24CXX_ReadBuff+128,sizeof(loginfo)-4));
 //	printf("crc read %8x\r\n",*(uint32_t*)&AT24CXX_ReadBuff[128+sizeof(loginfo)-4]);
 //
 //
@@ -237,11 +237,11 @@ void BackupOverwrite(void)
 //    data_decode();
 //
 //}
-
-
-
-
-
+//
+//
+//
+//
+//
 
 
 

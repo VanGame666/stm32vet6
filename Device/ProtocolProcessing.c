@@ -12,16 +12,7 @@ uint8_t pc_tail[] = {0xA5,0x5A};
 PC_Conect_t pc_connect;
 
 
-uint16_t CharReverse16 (uint16_t data)
-{
-	return (data & 0x00ff) << 8 | (data & 0xff00) >> 8;
-}
 
-
-uint16_t CharReverse32 (uint16_t data)
-{
-	return (data & 0x000000ff) << 24 | (data & 0x0000ff00) << 8 | (data & 0x00ff0000) >> 8 | (data & 0xff000000 >> 24);
-}
 
 
 #define FRAME_SEND(head,tail) frame_send(head,tail,sizeof(head),sizeof(tail))
@@ -85,12 +76,17 @@ void CMD_ReadScreen(void)
 
 void CMD_SwitchScreen(uint16_t parameter)
 {
-	uint16_t cmd,param;
+	uint16_t cmd,crc16,param;
 	cmd  = CharReverse16(0xB100);
 	param = CharReverse16(parameter);
+
 	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
 	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter));
-	tx_buffer[0] = sizeof(cmd) + sizeof(parameter);
+
+	crc16 = ModBusCRC16(&tx_buffer[1],1+2+2);
+	memcpy(&tx_buffer[1+2+2],(uint8_t*)&crc16,sizeof(crc16));
+
+	tx_buffer[0] = sizeof(cmd) + sizeof(parameter)+sizeof(crc16);
 	FRAME_SEND(dacai_head,dacai_tail);
 }
 
@@ -187,7 +183,24 @@ void CMD_temp(uint16_t parameter1,uint16_t parameter2)
 
 
 
+void DataSendPc(void)
+{
 
+	tx_buffer[1] = 0x81;
+	tx_buffer[2] = pc_connect.addr_num + 1+1+1+2;
+	tx_buffer[3] = pc_connect.addr;
+
+	for(i = 0;i < pc_connect.addr_num;i++)
+	{
+		AT24Read(pc_connect.addr,&tx_buffer[1+3],i);
+	}
+
+	crc16 = ModBusCRC16(&tx_buffer[1],tx_buffer[2]-2);
+	memcpy(&tx_buffer[1+tx_buffer[2] - 2],(uint8_t*)&crc16,sizeof(crc16));
+
+	tx_buffer[0] = tx_buffer[2];
+	FRAME_SEND(pc_head,pc_tail);
+}
 
 
 
