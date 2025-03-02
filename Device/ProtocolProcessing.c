@@ -149,8 +149,13 @@ void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2)
 
 
 
+void frame_verify(uint8_t* head,uint8_t* tail)
+{
+	if(HEAD_VERIFICATION(head) && TIAL_VERIFICATION(tail)){return 1;}
 
+	return 0;
 
+}
 
 
 
@@ -165,11 +170,11 @@ void PConectRceive(void)
 			pc_connect.data_len = pstruct->data_len;
 			pc_connect.addr = pstruct->addr;
 			pc_connect.addr_num = pstruct->addr_num;
-			pc_connect.CRC16_Check = pstruct->CRC16_Check;
+			pc_connect.crc16 = pstruct->crc16;
 
-			printf("rx_data_num= %d \r\n",rx_buffer[0]-sizeof(dacai_head)-sizeof(dacai_tail));
-			for(int i = 0;i < rx_buffer[0];i++){printf("0x%2X ",rx_buffer[i+1]);}
-			printf("\r\n");
+//			printf("rx_data_num= %d \r\n",rx_num-sizeof(pc_head)-sizeof(pc_tail));
+//			for(int i = 0;i < rx_num;i++){printf("0x%d ",rx_buffer[i]);}
+//			printf("\r\n");
 		}
 	}
 }
@@ -186,17 +191,55 @@ void PConectSend(void)
 	tx_buffer[2] = (pc_connect.addr&0x00FF);
 	tx_buffer[3] = (pc_connect.addr&0xFF00)>>8;
 
+	for(i = 0;i < 14;i++)
+	{
+		rx_buffer[i] = i;
+		AT24Write(i,&rx_buffer[i],0);
+	}
+
+
 	for(i = 0;i < pc_connect.addr_num;i++)
 	{
-		AT24Read(pc_connect.addr,&tx_buffer[4],i);
+		AT24Read(pc_connect.addr+i,&tx_buffer[4],i);
 	}
 
 	tx_num = tx_buffer[1];
-	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
+	crc16 = ModBusCRC16(tx_buffer,tx_num-sizeof(crc16));
 	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
 
 	FRAME_SEND(pc_head,pc_tail);
 }
+
+
+
+
+
+
+
+
+void pc_test(void)
+{
+	PConectRceive();
+	PConectSend();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

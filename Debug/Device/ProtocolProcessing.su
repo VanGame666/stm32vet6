@@ -5,6 +5,8 @@
 ../Device/ProtocolProcessing.c:85:6:CMD_SwitchScreen	24	static
 ../Device/ProtocolProcessing.c:103:6:CMD_SetButtonStatus	24	static
 ../Device/ProtocolProcessing.c:128:6:CMD_ReadButtonStatus	24	static
-../Device/ProtocolProcessing.c:157:6:PConectRceive	16	static
-../Device/ProtocolProcessing.c:180:6:PConectSend	16	static
-../Device/ProtocolProcessing.c:207:6:instruction_decode	16	static
+../Device/ProtocolProcessing.c:152:6:frame_verify	16	static
+../Device/ProtocolProcessing.c:162:6:PConectRceive	16	static
+../Device/ProtocolProcessing.c:185:6:PConectSend	16	static
+../Device/ProtocolProcessing.c:220:6:pc_test	8	static
+../Device/ProtocolProcessing.c:250:6:instruction_decode	16	static

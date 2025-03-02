@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include "Protocolprocessing.h"
 #include "AT24C02.h"
+#include "SoftwareCRC.h"
 
 /* USER CODE END Includes */
 
@@ -49,8 +50,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t at24_flag = 0;
-uint8_t temp_flag = 0;
+uint8_t key_flag = 0;
+uint8_t uart_flag = 0;
+
+extern PC_Conect_t pc_connect;
 
 
 /* USER CODE END PV */
@@ -77,7 +80,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	{
 		for(int temp = 65536*50;temp != 0;temp--);
 		HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_2);
-		at24_flag = 1;
+		key_flag = 1;
 	}
 }
 
@@ -86,7 +89,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart == &huart1)
     {
-    	rx_buffer[0] = Size;
+    	rx_num = Size;
+    	uart_flag = 1;
     	HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_2);
         HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rx_buffer,BUF_SIZE);
         __HAL_DMA_DISABLE_IT(&hdma_usart1_rx,DMA_IT_HT);
@@ -146,18 +150,29 @@ int main(void)
 	  HAL_Delay(1000);
 	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
 //	  if(AT24CXX_WriteBuff[0] != 0){AT24CXX_WriteBuff[0] = 0;}
-	  printf("ce shi\r\n");
-	  CMD_ReadButtonStatus(5,9);
-	  printf("\r\n");
+//	  printf("ce shi\r\n");
+//	  CMD_ReadButtonStatus(5,9);
+//	  printf("\r\n");
 
-//	  if(at24_flag == 1)
-//	  {
-//		  at24_flag = 0;
-//		  CMD_temp(1,0xd8e6);
-//		  HAL_Delay(1000);
-//		  CMD_temp(2,0xd9a6);
-//
-//	  }
+
+
+	  if(uart_flag == 1)
+	  {
+		  uart_flag = 0;
+
+
+		  pc_test();
+
+
+		  rx_num = 0;
+	  }
+
+
+
+	  if(key_flag == 1)
+	  {
+		  key_flag = 0;
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

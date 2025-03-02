@@ -13,7 +13,10 @@
 
 extern uint8_t rx_buffer[BUF_SIZE];
 extern uint8_t tx_buffer[BUF_SIZE];
-
+extern uint8_t rx_num;
+extern uint8_t tx_num;
+extern uint8_t pc_head[];
+extern uint8_t pc_tail[];
 
 
 void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size);
@@ -30,11 +33,13 @@ typedef struct{
 	uint8_t data_len;
 	uint16_t addr;
 	uint16_t addr_num;
-	uint16_t CRC16_Check;
+	uint16_t crc16;
 }PC_Conect_t;
 
 
+extern PC_Conect_t pc_connect;
 
+void pc_test(void);
 
 
 #endif
