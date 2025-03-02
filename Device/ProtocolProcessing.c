@@ -3,6 +3,9 @@
 uint8_t rx_buffer[BUF_SIZE]={0};
 uint8_t tx_buffer[BUF_SIZE]={0};
 
+uint8_t rx_num=0;
+uint8_t tx_num=0;
+
 uint8_t dacai_head[] = {0xEE};
 uint8_t dacai_tail[] = {0xFF,0xFC,0xFF,0xFF};
 
@@ -18,22 +21,22 @@ PC_Conect_t pc_connect;
 #define FRAME_SEND(head,tail) frame_send(head,tail,sizeof(head),sizeof(tail))
 void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
 {
-	uint8_t frame_size = head_size + tail_size + tx_buffer[0];
+	uint8_t frame_size = head_size + tail_size + tx_num;
 	uint8_t frame[frame_size];
 	uint8_t i,j = 0;
 	for(i = 0;i < head_size;i++,j++)
 	{
 		frame[j] = head[i];
 	}
-	for(i = 0;i < tx_buffer[0];i++,j++)
+	for(i = 0;i < tx_num;i++,j++)
 	{
-		frame[j] = tx_buffer[1+i];
+		frame[j] = tx_buffer[i];
 	}
 	for(i = 0;i < tail_size;i++,j++)
 	{
 		frame[j] = tail[i];
 	}
-	HAL_UART_Transmit(&huart6,&frame,frame_size, 0xFFFF);
+	HAL_UART_Transmit(&huart1,&frame,frame_size, 0xFFFF);
 }
 
 
@@ -44,7 +47,7 @@ int head_verification(uint8_t* head,uint8_t head_size)
 {
 	for(int i = 0;i < head_size;i++)
 	{
-		if(rx_buffer[1+i] != head[i]){return 0;}
+		if(rx_buffer[i] != head[i]){return 0;}
 	}
 	return 1;
 }
@@ -56,7 +59,7 @@ int tail_verification(uint8_t* tail,uint8_t tail_size)
 {
 	for(int i = 0;i < tail_size;i++)
 	{
-		if(rx_buffer[rx_buffer[0]-3+i] != tail[i]){return 0;}
+		if(rx_buffer[rx_num-tail_size+i] != tail[i]){return 0;}
 	}
 	return 1;
 }
@@ -65,10 +68,15 @@ int tail_verification(uint8_t* tail,uint8_t tail_size)
 
 void CMD_ReadScreen(void)
 {
-	uint16_t cmd,param;
+	uint16_t cmd,param,crc16;
+	tx_num = sizeof(cmd)+sizeof(crc16);
+
 	cmd  = CharReverse16(0xB101);
-	tx_buffer[0] = sizeof(cmd);
-	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
+	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+
+	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
+	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
+
 	FRAME_SEND(dacai_head,dacai_tail);
 }
 
@@ -76,33 +84,42 @@ void CMD_ReadScreen(void)
 
 void CMD_SwitchScreen(uint16_t parameter)
 {
-	uint16_t cmd,crc16,param;
+	uint16_t cmd,param,crc16;
+	tx_num = sizeof(cmd) + sizeof(parameter)+sizeof(crc16);
+
 	cmd  = CharReverse16(0xB100);
+	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+
 	param = CharReverse16(parameter);
+	memcpy(&tx_buffer[2],(uint8_t*)&param,sizeof(parameter));
 
-	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
-	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter));
+	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
+	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
 
-	crc16 = ModBusCRC16(&tx_buffer[1],1+2+2);
-	memcpy(&tx_buffer[1+2+2],(uint8_t*)&crc16,sizeof(crc16));
-
-	tx_buffer[0] = sizeof(cmd) + sizeof(parameter)+sizeof(crc16);
 	FRAME_SEND(dacai_head,dacai_tail);
 }
 
 
 void CMD_SetButtonStatus(uint16_t parameter1,uint16_t parameter2,uint8_t parameter3)
 {
-	uint16_t cmd,param;
-	cmd  = CharReverse16(0xB110);
-	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
-	param = CharReverse16(parameter1);
-	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter1));
-	param = CharReverse16(parameter2);
-	memcpy(&tx_buffer[1+2+2],(uint8_t*)&param,sizeof(parameter2));
-	memcpy(&tx_buffer[1+2+2+2],(uint8_t*)&parameter3,sizeof(parameter3));
+	uint16_t cmd,param,crc16;
+	tx_num = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(parameter3)+sizeof(crc16);
 
-	tx_buffer[0] = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(parameter3);
+	cmd  = CharReverse16(0xB110);
+	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+
+	param = CharReverse16(parameter1);
+	memcpy(&tx_buffer[2],(uint8_t*)&param,sizeof(parameter1));
+
+	param = CharReverse16(parameter2);
+	memcpy(&tx_buffer[4],(uint8_t*)&param,sizeof(parameter2));
+
+	param = CharReverse16(parameter3);
+	memcpy(&tx_buffer[6],(uint8_t*)&parameter3,sizeof(parameter3));
+
+	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
+	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
+
 	FRAME_SEND(dacai_head,dacai_tail);
 }
 
@@ -110,42 +127,45 @@ void CMD_SetButtonStatus(uint16_t parameter1,uint16_t parameter2,uint8_t paramet
 
 void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2)
 {
-	uint16_t cmd,param;
-	cmd  = CharReverse16(0xB111);
-	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
-	param = CharReverse16(parameter1);
-	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter1));
-	param = CharReverse16(parameter2);
-	memcpy(&tx_buffer[1+2+2],(uint8_t*)&param,sizeof(parameter2));
+	uint16_t cmd,param,crc16;
+	tx_num = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(crc16);
 
-	tx_buffer[0] = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2);
+	cmd  = CharReverse16(0xB111);
+	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+
+	param = CharReverse16(parameter1);
+	memcpy(&tx_buffer[2],(uint8_t*)&param,sizeof(parameter1));
+
+	param = CharReverse16(parameter2);
+	memcpy(&tx_buffer[4],(uint8_t*)&param,sizeof(parameter2));
+
+	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
+	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
+
 	FRAME_SEND(dacai_head,dacai_tail);
 }
 
 
-void PConectFrameSend(void)
+
+
+
+
+
+
+
+
+void PConectRceive(void)
 {
-	memcpy(&tx_buffer[1],(uint8_t*)&pc_connect,sizeof(PC_Conect_t));
-	tx_buffer[0] = sizeof(PC_Conect_t);
-	FRAME_SEND(pc_head,pc_tail);
-}
-
-
-
-void PConectFrameRceive(void)
-{
-	if(HEAD_VERIFICATION(dacai_head))
+	if(HEAD_VERIFICATION(pc_head))
 	{
-		if(TIAL_VERIFICATION(dacai_tail))
+		if(TIAL_VERIFICATION(pc_tail))
 		{
-			PC_Conect_t* pstruct = (PC_Conect_t*)&rx_buffer[sizeof(dacai_head)+1];
+			PC_Conect_t* pstruct = (PC_Conect_t*)&rx_buffer[sizeof(pc_head)];
 			pc_connect.mode = pstruct->mode;
 			pc_connect.data_len = pstruct->data_len;
-			pc_connect.addr_L = pstruct->addr_L;
-			pc_connect.addr_H = pstruct->addr_H;
-			pc_connect.addr_num_L = pstruct->addr_num_L;
-			pc_connect.addr_num_H = pstruct->addr_num_H;
-			pc_connect.CRC_Check = pstruct->CRC_Check;
+			pc_connect.addr = pstruct->addr;
+			pc_connect.addr_num = pstruct->addr_num;
+			pc_connect.CRC16_Check = pstruct->CRC16_Check;
 
 			printf("rx_data_num= %d \r\n",rx_buffer[0]-sizeof(dacai_head)-sizeof(dacai_tail));
 			for(int i = 0;i < rx_buffer[0];i++){printf("0x%2X ",rx_buffer[i+1]);}
@@ -157,59 +177,25 @@ void PConectFrameRceive(void)
 
 
 
-
-
-
-
-
-
-
-void CMD_temp(uint16_t parameter1,uint16_t parameter2)
-{
-	uint16_t cmd,param;
-	cmd  = CharReverse16(0xB100);
-	memcpy(&tx_buffer[1],(uint8_t*)&cmd,sizeof(cmd));
-	param = CharReverse16(parameter1);
-	memcpy(&tx_buffer[1+2],(uint8_t*)&param,sizeof(parameter1));
-	param = CharReverse16(parameter2);
-	memcpy(&tx_buffer[1+2+2],(uint8_t*)&param,sizeof(parameter2));
-
-	tx_buffer[0] = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2);
-	FRAME_SEND(dacai_head,dacai_tail);
-}
-
-
-
-
-
-
-void DataSendPc(void)
+void PConectSend(void)
 {
 
-	tx_buffer[1] = 0x81;
-	tx_buffer[2] = pc_connect.addr_num + 1+1+1+2;
-	tx_buffer[3] = pc_connect.addr;
+	tx_buffer[0] = 0x81;
+	tx_buffer[1] = (pc_connect.addr_num + 1+1+2+2+2);
+	tx_buffer[2] = (pc_connect.addr&0x00FF);
+	tx_buffer[3] = (pc_connect.addr&0xFF00)>>8;
 
 	for(i = 0;i < pc_connect.addr_num;i++)
 	{
-		AT24Read(pc_connect.addr,&tx_buffer[1+3],i);
+		AT24Read(pc_connect.addr,&tx_buffer[4],i);
 	}
 
-	crc16 = ModBusCRC16(&tx_buffer[1],tx_buffer[2]-2);
-	memcpy(&tx_buffer[1+tx_buffer[2] - 2],(uint8_t*)&crc16,sizeof(crc16));
+	tx_num = tx_buffer[1];
+	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
+	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
 
-	tx_buffer[0] = tx_buffer[2];
 	FRAME_SEND(pc_head,pc_tail);
 }
-
-
-
-
-
-
-
-
-
 
 
 
