@@ -36,7 +36,7 @@ void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
 	{
 		frame[j] = tail[i];
 	}
-	HAL_UART_Transmit(&huart1,&frame,frame_size, 0xFFFF);
+	HAL_UART_Transmit(&huart6,&frame,frame_size, 0xFFFF);
 }
 
 

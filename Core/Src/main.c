@@ -155,10 +155,10 @@ int main(void)
 	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
 
 	  HAL_Delay(1000);
-	  CMD_SwitchScreen(1);
-
+	  CMD_SwitchScreen(0);
+	  printf("\r\ntest\r\n");
 	  HAL_Delay(1000);
-	  CMD_SwitchScreen(2);
+	  CMD_SwitchScreen(1);
 
 
 //	  if(uart_flag == 1)
