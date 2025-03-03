@@ -145,33 +145,40 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	for(int i = 0;i < 128;i++)
+	{
+		rx_buffer[i] = i;
+		AT24Write(i,&rx_buffer[i],0);
+	}
   while (1)
   {
-	  HAL_Delay(1000);
 	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
-//	  if(AT24CXX_WriteBuff[0] != 0){AT24CXX_WriteBuff[0] = 0;}
-//	  printf("ce shi\r\n");
-//	  CMD_ReadButtonStatus(5,9);
-//	  printf("\r\n");
+
+	  HAL_Delay(1000);
+	  CMD_SwitchScreen(1);
+
+	  HAL_Delay(1000);
+	  CMD_SwitchScreen(2);
 
 
-
-	  if(uart_flag == 1)
-	  {
-		  uart_flag = 0;
-
-
-		  pc_test();
-
-
-		  rx_num = 0;
-	  }
+//	  if(uart_flag == 1)
+//	  {
+//		  uart_flag = 0;
+//
+//
+//		  pc_test();
+//
+//
+//		  rx_num = 0;
+//	  }
 
 
 
 	  if(key_flag == 1)
 	  {
 		  key_flag = 0;
+		  CMD_ReadScreen();
+
 	  }
     /* USER CODE END WHILE */
 
