@@ -68,6 +68,16 @@ typedef struct{  //32bytes
 	uint8_t adc5_err_code;
 }FaultRecord_t;
 
+extern FaultHeader_t FaultHeader;
+extern FaultRecord_t FaultRecord;
+
+extern void write_fault_header(FaultHeader_t* header);
+extern uint16_t time_code(uint8_t hour,uint8_t min);
+extern uint16_t data_code(uint8_t year,uint8_t month,uint8_t day);
+
+extern void time_decode(void);
+extern void data_decode(void);
+
 #endif
 
 #ifdef __cplusplus

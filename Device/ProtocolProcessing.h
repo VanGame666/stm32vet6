@@ -9,8 +9,9 @@
 #include "SoftwareCRC.h"
 
 #define BUF_SIZE 128
-//#define CMD_SEND(command) CMD_Send(command,0xFFFF)
 #define CMD_SEND(command, ...) CMD_Send(command,##__VA_ARGS__, 0xFFFF)
+#define FRAME_SEND_USART huart1
+
 
 extern uint8_t rx_buffer[BUF_SIZE];
 extern uint8_t tx_buffer[BUF_SIZE];
@@ -28,10 +29,11 @@ typedef struct{
 }PC_Conect_t;
 extern PC_Conect_t pc_connect;
 
-
+/* Dacai screen control command */
 typedef enum{
 	 ReadButtonStatus = 0xB111,
-	 SetButtonStatus = 0xBB01
+	 SetButtonStatus = 0xB110,
+	 SwitchScreen = 0xB100,
 }Cmd_t;
 extern Cmd_t cmd;
 
@@ -54,8 +56,7 @@ void instruction_code(void);
 extern void CMD_Send(uint16_t command, ...);
 
 
-
-void pc_test(void);
+void PConectProcess(void);
 
 
 #endif

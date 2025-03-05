@@ -1,3 +1,5 @@
+/************************************************** START **************************************************/
+
 #include "AT24C02.h"
 
 
@@ -18,21 +20,12 @@ void struct_regist(void)
 	FaultHeader.read_addr = pStates->read_addr;
 	FaultHeader.write_addr = pStates->write_addr;
 }
-
+/************************************************** Time encoding and decoding **************************************************/
 void time_decode(void)
 {
 	uint8_t time_hour =  (FaultHeader.err_time & 0xFF00) >> 8;
 	uint8_t time_min =  (FaultHeader.err_time & 0x00ff);
-	printf("now time:hour %d min: %d\r\n",time_hour,time_min);
-}
-
-
-void data_decode(void)
-{
-	uint8_t data_year =  (FaultHeader.err_data & 0xFE00) >> 9;
-	uint8_t data_month =  (FaultHeader.err_data & 0x01E0) >> 5;
-	uint8_t data_day =  (FaultHeader.err_data & 0x001F);
-	printf("now data:year %d month: %d day: %d\r\n",data_year+1980,data_month,data_day);
+	printf("\r\nnow time:hour %d min: %d\r\n",time_hour,time_min);
 }
 
 uint16_t time_code(uint8_t hour,uint8_t min)
@@ -42,6 +35,14 @@ uint16_t time_code(uint8_t hour,uint8_t min)
 	uint16_t time_code =  time_hour|time_min;
 	printf("now time code :%4x \r\n",time_code);
 	return time_code;
+}
+
+void data_decode(void)
+{
+	uint8_t data_year =  (FaultHeader.err_data & 0xFE00) >> 9;
+	uint8_t data_month =  (FaultHeader.err_data & 0x01E0) >> 5;
+	uint8_t data_day =  (FaultHeader.err_data & 0x001F);
+	printf("\r\nnow data:year %d month: %d day: %d\r\n",data_year+1980,data_month,data_day);
 }
 
 uint16_t data_code(uint8_t year,uint8_t month,uint8_t day)
@@ -55,6 +56,8 @@ uint16_t data_code(uint8_t year,uint8_t month,uint8_t day)
 	return data_code;
 }
 
+
+/************************************************** AT24's main storage write and backup area read and write **************************************************/
 
 void AT24Write(int position,void* pstruct,int index)
 {
@@ -70,12 +73,22 @@ void AT24Read(int position,void* pstruct,int index)
 	HAL_I2C_Mem_Read(&hi2c1, AT24CXX_Read_ADDR,position,I2C_MEMADD_SIZE_8BIT, (uint8_t*)pstruct+index,1,1000);
 }
 
+
+
+
+/************************************************** Reading and writing of error logs **************************************************/
+
 void write_fault_header(FaultHeader_t* header)
 {
-	header->CRCheck = IEEECRC32(header,sizeof(FaultHeader_t)-4);
+	header->err_time = time_code(17,31);
+	header->err_data = data_code(2025,3,5);
+	header->fault_count = header->fault_count + 1;
+	header->read_addr = 0;
+	header->write_addr = 0;
+	header->CRCheck = EthCRC32(header,sizeof(FaultHeader_t)-4);
 	  for(int j = 0;j<sizeof(FaultHeader_t);j++)
 	  {
-		  AT24Write(FaultHeader_START,header,j);
+		  AT24Write(FaultHeader_START + j,header,j);
 	  }
 }
 
@@ -152,7 +165,7 @@ uint8_t read_fault_record(FaultRecord_t* record)
 	}
 }
 
-
+/************************************************** Data error in the main storage area, restore from the backup area **************************************************/
 
 void BackupOverwrite(void)
 {
@@ -169,7 +182,7 @@ void BackupOverwrite(void)
 }
 
 
-
+/************************************************** END **************************************************/
 
 
 

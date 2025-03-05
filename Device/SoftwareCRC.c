@@ -52,7 +52,7 @@ uint32_t EthCRC32(uint8_t* data, uint16_t len)
 			}
     }
   }
-  return CRC32 ^ 0xFFFFFFFF;;
+  return CRC32 ^ 0xFFFFFFFF;
 }
 
 

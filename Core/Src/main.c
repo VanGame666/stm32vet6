@@ -145,40 +145,38 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	for(int i = 0;i < 128;i++)
-	{
-		rx_buffer[i] = i+1;
-		AT24Write(i,&rx_buffer[i],0);
-	}
+//	for(int i = 0;i < 128;i++)
+//	{
+//		rx_buffer[i] = i+1;
+//		AT24Write(i,&rx_buffer[i],0);
+//	}
+  write_fault_header(&FaultHeader);
+  write_fault_header(&FaultHeader);
+
   while (1)
   {
-	  HAL_Delay(500);
 	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
+	  HAL_Delay(200);
+//	  CMD_SEND(SwitchScreen,0);
+//	  HAL_Delay(1000);
+//	  CMD_SEND(SwitchScreen,1);
+//	  HAL_Delay(1000);
+//	  CMD_SEND(SwitchScreen,2);
+//	  HAL_Delay(1000);
+//	  CMD_SEND(SwitchScreen,3);
 
-//	  CMD_ReadScreen();
 
-
-//	  if(uart_flag == 1)
-//	  {
-//		  uart_flag = 0;
-//
-//
-//		  pc_test();
-//
-//
-//		  rx_num = 0;
-//	  }
+	  if(uart_flag == 1)
+	  {
+		  uart_flag = 0;
+		  PConectProcess();
+	  }
 
 
 
 	  if(key_flag == 1)
 	  {
 		  key_flag = 0;
-//		  CMD_ReadButtonStatus(1,2);
-		  HAL_Delay(500);
-		  CMD_SEND(SetButtonStatus,1,2,1);
-
-
 	  }
     /* USER CODE END WHILE */
 

@@ -1,3 +1,5 @@
+/************************************************** START **************************************************/
+
 #include "Protocolprocessing.h"
 
 /* Define the transmit-receive buffer */
@@ -18,6 +20,13 @@ uint8_t pc_tail[] = {0xA5,0x5A};
 /* Definition of temporary transit of computer communication data */
 PC_Conect_t pc_connect;
 Cmd_t cmd;
+
+
+
+
+
+
+/************************************************** General communication protocol **************************************************/
 
 /**
   * @brief	Data protocol header and tail encapsulation sends
@@ -42,7 +51,7 @@ void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
 	{
 		frame[j] = tail[i];
 	}
-	HAL_UART_Transmit(&huart1,&frame,frame_size, 0xFFFF);
+	HAL_UART_Transmit(&FRAME_SEND_USART,&frame,frame_size, 0xFFFF);
 }
 
 
@@ -79,7 +88,7 @@ int tail_verification(uint8_t* tail,uint8_t tail_size)
 }
 
 
-
+/************************************************** Dacai Screen Protocol Processing **************************************************/
 
 /**
   * @brief	Single-byte instruction or double-byte instruction is sent,
@@ -90,15 +99,14 @@ int tail_verification(uint8_t* tail,uint8_t tail_size)
 void CMD_Send(Cmd_t command, ...)
 {
     uint16_t cmd, param, crc16;
+    uint16_t count = 0,param_start = 0;
     va_list args;
-    int count = 0;
-    int param_start = 0;
 
-
+    /* Determine whether it is a double-byte instruction or a single-byte instruction */
     if((command & 0xFF00) == 0xB100)
     {
     	cmd = CharReverse16((uint16_t)command);
-    	memcpy(&tx_buffer[0], (uint8_t*)&cmd, 2);
+    	memcpy(&tx_buffer[0], (uint8_t*)&cmd, 2);		//It is recommended to determine that the instruction length is incomplete.
         tx_num = sizeof(crc16) + 2;
     	param_start = 2;
     }else{
@@ -108,6 +116,7 @@ void CMD_Send(Cmd_t command, ...)
     	param_start = 1;
     }
 
+    /* Read variable parameters */
     va_start(args, command);
     while (1) {
         param = (uint16_t)va_arg(args, int);
@@ -121,20 +130,48 @@ void CMD_Send(Cmd_t command, ...)
     }
     va_end(args);
 
-
+    /* Add CRC verification code */
     crc16 = ModBusCRC16(tx_buffer, tx_num - sizeof(crc16));
+   	crc16 = CharReverse16(crc16);//The Dacai screen transmission is a big-end transmission, so it should be converted to a big-end mode
     memcpy(&tx_buffer[tx_num - sizeof(crc16)], (uint8_t*)&crc16, sizeof(crc16));
 
+    /* Frame sending */
     FRAME_SEND(dacai_head, dacai_tail);
 }
 
 
+/**
+  * @brief
+  * @param
+  * @retval
+  */
+void instruction_decode(void)
+{
+	char data_index = sizeof(dacai_head)-1;
+	if(rx_buffer[data_index+1] == 0xB1)
+	{
+		switch (rx_buffer[data_index+2])
+		{
+			case 0x00:		break;
+			case 0x01:		break;
+			case 0x02:		break;
+			case 0x03:printf("0x03  two cmd\r\n");		break;
+			case 0x04:		break;
+			default:break;
+		}
+	}else{
+		switch (rx_buffer[data_index+1])
+		{
+			case 0x01:		break;
+			case 0x02:		break;
+			case 0x03:		break;
+			case 0x04:printf("0x04  one cmd\r\n");		break;
+			default:break;
+		}
+	}
+}
 
-
-
-
-
-
+/************************************************** Upper computer communication **************************************************/
 
 /**
   * @brief	Temporary transfer storage of computer communication data
@@ -153,6 +190,9 @@ void PConectRceive(void)
 			pc_connect.addr = pstruct->addr;
 			pc_connect.addr_num = pstruct->addr_num;
 			pc_connect.crc16 = pstruct->crc16;
+
+			if(pstruct->addr < 12){pc_connect.addr = 0;pc_connect.addr_num = 12;}
+
 		}
 	}
 }
@@ -187,46 +227,28 @@ void PConectSend(void)
 }
 
 
-/* test */
-
-void pc_test(void)
+/**
+  * @brief	Test
+  * @param	Null
+  * @retval	Null
+  */
+void PConectProcess(void)
 {
+	if(rx_num == 0)return;
 	PConectRceive();
 	PConectSend();
 }
 
 
 
+/**
+  * @brief	Null
+  * @param	Null
+  * @retval	Null
+  */
 
 
-
-void instruction_decode(void)
-{
-	char data_index = sizeof(dacai_head)-1;
-	if(rx_buffer[data_index+1] == 0xB1)
-	{
-		switch (rx_buffer[data_index+2])
-		{
-			case 0x00:		break;
-			case 0x01:		break;
-			case 0x02:		break;
-			case 0x03:printf("0x03  two cmd\r\n");		break;
-			case 0x04:		break;
-			default:break;
-		}
-	}else{
-		switch (rx_buffer[data_index+1])
-		{
-			case 0x01:		break;
-			case 0x02:		break;
-			case 0x03:		break;
-			case 0x04:printf("0x04  one cmd\r\n");		break;
-			default:break;
-		}
-	}
-}
-
-
+/************************************************** Original deprecation scheme **************************************************/
 
 ///**
 //  * @brief	Serial screen command send
@@ -312,3 +334,6 @@ void instruction_decode(void)
 //
 //	FRAME_SEND(dacai_head,dacai_tail);
 //}
+
+
+/************************************************** END **************************************************/
