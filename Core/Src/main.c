@@ -147,18 +147,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	for(int i = 0;i < 128;i++)
 	{
-		rx_buffer[i] = i;
+		rx_buffer[i] = i+1;
 		AT24Write(i,&rx_buffer[i],0);
 	}
   while (1)
   {
+	  HAL_Delay(500);
 	  HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_1);
 
-	  HAL_Delay(1000);
-	  CMD_SwitchScreen(0);
-	  printf("\r\ntest\r\n");
-	  HAL_Delay(1000);
-	  CMD_SwitchScreen(1);
+//	  CMD_ReadScreen();
 
 
 //	  if(uart_flag == 1)
@@ -177,7 +174,10 @@ int main(void)
 	  if(key_flag == 1)
 	  {
 		  key_flag = 0;
-		  CMD_ReadScreen();
+//		  CMD_ReadButtonStatus(1,2);
+		  HAL_Delay(500);
+		  CMD_SEND(SetButtonStatus,1,2,1);
+
 
 	  }
     /* USER CODE END WHILE */
