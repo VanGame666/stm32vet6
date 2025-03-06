@@ -1,5 +1,4 @@
 /************************************************** START **************************************************/
-
 #include "Protocolprocessing.h"
 
 /* Define the transmit-receive buffer */
@@ -17,14 +16,14 @@ uint8_t dacai_tail[] = {0xFF,0xFC,0xFF,0xFF};
 uint8_t pc_head[] = {0x5A,0xA5};
 uint8_t pc_tail[] = {0xA5,0x5A};
 
+uint8_t dds_head[] = {};
+uint8_t dds_tail[] = {};
+
 /* Definition of temporary transit of computer communication data */
-PC_Conect_t pc_connect;
-Cmd_t cmd;
+PConectTypeDef PConnect;
 
-
-
-
-
+CmdTypeDef Cmd;
+SendSlectTypeDef SendSlect;
 
 /************************************************** General communication protocol **************************************************/
 
@@ -33,8 +32,8 @@ Cmd_t cmd;
   * @param	Frame head and end of frame
   * @retval	Null
   */
-#define FRAME_SEND(head,tail) frame_send(head,tail,sizeof(head),sizeof(tail))
-void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
+#define FRAME_SEND(SendSlect,head,tail) frame_send(SendSlect,head,tail,sizeof(head),sizeof(tail))
+void frame_send(SendSlectTypeDef SendSlect,uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
 {
 	uint8_t frame_size = head_size + tail_size + tx_num;
 	uint8_t frame[frame_size];
@@ -51,7 +50,12 @@ void frame_send(uint8_t* head,uint8_t* tail,uint8_t head_size,uint8_t tail_size)
 	{
 		frame[j] = tail[i];
 	}
-	HAL_UART_Transmit(&FRAME_SEND_USART,&frame,frame_size, 0xFFFF);
+	switch (SendSlect)
+	{
+		case UART: HAL_UART_Transmit(&URTSEND,&frame,frame_size, 0xFFFF);break;
+		case SPI: HAL_UART_Transmit(&SPISEND,&frame,frame_size, 0xFFFF);break;
+		defalt :break;
+	}
 }
 
 
@@ -96,22 +100,22 @@ int tail_verification(uint8_t* tail,uint8_t tail_size)
   * @param	Instructions and parameters must have one instruction, and parameters can be omitted.
   * @retval	Null
   */
-void CMD_Send(Cmd_t command, ...)
+void Dacai_Send(CmdTypeDef command, ...)
 {
-    uint16_t cmd, param, crc16;
+    uint16_t Cmd, param, crc16;
     uint16_t count = 0,param_start = 0;
     va_list args;
 
     /* Determine whether it is a double-byte instruction or a single-byte instruction */
     if((command & 0xFF00) == 0xB100)
     {
-    	cmd = CharReverse16((uint16_t)command);
-    	memcpy(&tx_buffer[0], (uint8_t*)&cmd, 2);		//It is recommended to determine that the instruction length is incomplete.
+    	Cmd = CharReverse16((uint16_t)command);
+    	memcpy(&tx_buffer[0], (uint8_t*)&Cmd, 2);		//It is recommended to determine that the instruction length is incomplete.
         tx_num = sizeof(crc16) + 2;
     	param_start = 2;
     }else{
-    	cmd = CharReverse16((uint16_t)command);
-    	memcpy(&tx_buffer[0], (uint8_t*)&cmd, 1);
+    	Cmd = CharReverse16((uint16_t)command);
+    	memcpy(&tx_buffer[0], (uint8_t*)&Cmd, 1);
         tx_num = sizeof(crc16) + 1;
     	param_start = 1;
     }
@@ -136,7 +140,7 @@ void CMD_Send(Cmd_t command, ...)
     memcpy(&tx_buffer[tx_num - sizeof(crc16)], (uint8_t*)&crc16, sizeof(crc16));
 
     /* Frame sending */
-    FRAME_SEND(dacai_head, dacai_tail);
+    FRAME_SEND(UART,dacai_head, dacai_tail);
 }
 
 
@@ -147,25 +151,25 @@ void CMD_Send(Cmd_t command, ...)
   */
 void instruction_decode(void)
 {
-	char data_index = sizeof(dacai_head)-1;
-	if(rx_buffer[data_index+1] == 0xB1)
+	char data_index = sizeof(dacai_head);
+	if(rx_buffer[data_index] == 0xB1)		//Receive the first data of the data segment
 	{
-		switch (rx_buffer[data_index+2])
+		switch (rx_buffer[data_index])
 		{
 			case 0x00:		break;
 			case 0x01:		break;
 			case 0x02:		break;
-			case 0x03:printf("0x03  two cmd\r\n");		break;
+			case 0x03:printf("0x03  two Cmd\r\n");		break;
 			case 0x04:		break;
 			default:break;
 		}
 	}else{
-		switch (rx_buffer[data_index+1])
+		switch (rx_buffer[data_index])
 		{
 			case 0x01:		break;
 			case 0x02:		break;
 			case 0x03:		break;
-			case 0x04:printf("0x04  one cmd\r\n");		break;
+			case 0x04:printf("0x04  one Cmd\r\n");		break;
 			default:break;
 		}
 	}
@@ -184,15 +188,14 @@ void PConectRceive(void)
 	{
 		if(TIAL_VERIFICATION(pc_tail))
 		{
-			PC_Conect_t* pstruct = (PC_Conect_t*)&rx_buffer[sizeof(pc_head)];
-			pc_connect.mode = pstruct->mode;
-			pc_connect.data_len = pstruct->data_len;
-			pc_connect.addr = pstruct->addr;
-			pc_connect.addr_num = pstruct->addr_num;
-			pc_connect.crc16 = pstruct->crc16;
+			PConectTypeDef* pstruct = (PConectTypeDef*)&rx_buffer[sizeof(pc_head)];
+			PConnect.mode = pstruct->mode;
+			PConnect.data_len = pstruct->data_len;
+			PConnect.addr = pstruct->addr;
+			PConnect.addr_num = pstruct->addr_num;
+			PConnect.crc16 = pstruct->crc16;
 
-			if(pstruct->addr < 12){pc_connect.addr = 0;pc_connect.addr_num = 12;}
-
+			if(pstruct->addr < 12){PConnect.addr = 0;PConnect.addr_num = 12;}
 		}
 	}
 }
@@ -209,21 +212,22 @@ void PConectSend(void)
 	uint16_t i,crc16;
 
 	tx_buffer[0] = 0x81;
-	tx_buffer[1] = (pc_connect.addr_num + 1+1+2+2);
-	tx_buffer[2] = (pc_connect.addr&0x00FF);
-	tx_buffer[3] = (pc_connect.addr&0xFF00)>>8;
+	tx_buffer[1] = (PConnect.addr_num + 1+1+2+2);
+//	tx_buffer[2] = (PConnect.addr&0x00FF);
+//	tx_buffer[3] = (PConnect.addr&0xFF00)>>8;
+	*(uint16_t*)&tx_buffer[2] = PConnect.addr;
 
 
-	for(i = 0;i < pc_connect.addr_num;i++)
+	for(i = 0;i < PConnect.addr_num;i++)
 	{
-		AT24Read(pc_connect.addr+i,&tx_buffer[4],i);
+		AT24Read(PConnect.addr+i,&tx_buffer[4],i);
 	}
 
 	tx_num = tx_buffer[1];
 	crc16 = ModBusCRC16(tx_buffer,tx_num-sizeof(crc16));
 	memcpy(&tx_buffer[tx_num-sizeof(crc16)],(uint8_t*)&crc16,sizeof(crc16));
 
-	FRAME_SEND(pc_head,pc_tail);
+	FRAME_SEND(UART,pc_head,pc_tail);
 }
 
 
@@ -241,11 +245,75 @@ void PConectProcess(void)
 
 
 
+/************************************************** DDS communication protocol **************************************************/
+
 /**
   * @brief	Null
   * @param	Null
   * @retval	Null
   */
+void DDSend(uint8_t enable,uint32_t frequecy,uint8_t channel, float phase)
+{
+	uint16_t i;
+	uint8_t checksum;
+
+    uint32_t frequecy_out = (frequecy * 4294967296UL / 50000000UL);
+
+	tx_buffer[0] = 0xA5;
+	tx_buffer[1] = 0x12 - enable;
+	*(uint32_t*)&tx_buffer[2] = CharReverse32((uint32_t)frequecy_out);
+	tx_buffer[6] = channel * 16 + 1;
+
+
+
+
+    if((int16_t)phase == phase)//Warning: Negative phase is not considered, and optimization is required in the future
+    {
+        phase = ((int16_t)phase)*2;
+    }else{
+        phase = ((int16_t)phase)*2 + 1;
+    }
+
+	*(uint16_t*)&tx_buffer[7] = CharReverse16(phase);
+
+
+	tx_num = 1 + 1 + 4 + 1 + 2 + 1;
+	checksum = CheckSum8(tx_buffer,tx_num-sizeof(checksum));
+	memcpy(&tx_buffer[tx_num-sizeof(checksum)],(uint8_t*)&checksum,sizeof(checksum));
+
+	for(i = 0;i < tx_num;i++)
+	{
+		printf("0x%2x \r\n",tx_buffer[i]);
+	}
+
+	FRAME_SEND(SPI,dds_head,dds_tail);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /************************************************** Original deprecation scheme **************************************************/
@@ -255,13 +323,13 @@ void PConectProcess(void)
 //  * @param	Null
 //  * @retval	Null
 //  */
-//void CMD_ReadScreen(void)
+//void Cmd_ReadScreen(void)
 //{
-//	uint16_t cmd,param,crc16;
-//	tx_num = sizeof(cmd)+sizeof(crc16);
+//	uint16_t Cmd,param,crc16;
+//	tx_num = sizeof(Cmd)+sizeof(crc16);
 //
-//	cmd  = CharReverse16(0xB101);
-//	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+//	Cmd  = CharReverse16(0xB101);
+//	memcpy(&tx_buffer[0],(uint8_t*)&Cmd,sizeof(Cmd));
 //
 //	crc16 = ModBusCRC16(tx_buffer,tx_num-2);
 //	crc16 = CharReverse16(crc16);
@@ -271,13 +339,13 @@ void PConectProcess(void)
 //}
 //
 //
-//void CMD_SwitchScreen(uint16_t parameter)
+//void Cmd_SwitchScreen(uint16_t parameter)
 //{
-//	uint16_t cmd,param,crc16;
-//	tx_num = sizeof(cmd) + sizeof(parameter)+sizeof(crc16);
+//	uint16_t Cmd,param,crc16;
+//	tx_num = sizeof(Cmd) + sizeof(parameter)+sizeof(crc16);
 //
-//	cmd  = CharReverse16(0xB100);
-//	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+//	Cmd  = CharReverse16(0xB100);
+//	memcpy(&tx_buffer[0],(uint8_t*)&Cmd,sizeof(Cmd));
 //
 //	param = CharReverse16(parameter);
 //	memcpy(&tx_buffer[2],(uint8_t*)&param,sizeof(parameter));
@@ -290,13 +358,13 @@ void PConectProcess(void)
 //}
 //
 //
-//void CMD_SetButtonStatus(uint16_t parameter1,uint16_t parameter2,uint8_t parameter3)
+//void Cmd_SetButtonStatus(uint16_t parameter1,uint16_t parameter2,uint8_t parameter3)
 //{
-//	uint16_t cmd,param,crc16;
-//	tx_num = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(parameter3)+sizeof(crc16);
+//	uint16_t Cmd,param,crc16;
+//	tx_num = sizeof(Cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(parameter3)+sizeof(crc16);
 //
-//	cmd  = CharReverse16(0xB110);
-//	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+//	Cmd  = CharReverse16(0xB110);
+//	memcpy(&tx_buffer[0],(uint8_t*)&Cmd,sizeof(Cmd));
 //
 //	param = CharReverse16(parameter1);
 //	memcpy(&tx_buffer[2],(uint8_t*)&param,sizeof(parameter1));
@@ -315,13 +383,13 @@ void PConectProcess(void)
 //
 //
 //
-//void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2)
+//void Cmd_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2)
 //{
-//	uint16_t cmd,param,crc16;
-//	tx_num = sizeof(cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(crc16);
+//	uint16_t Cmd,param,crc16;
+//	tx_num = sizeof(Cmd) + sizeof(parameter1)+sizeof(parameter2)+sizeof(crc16);
 //
-//	cmd  = CharReverse16(0xB111);
-//	memcpy(&tx_buffer[0],(uint8_t*)&cmd,sizeof(cmd));
+//	Cmd  = CharReverse16(0xB111);
+//	memcpy(&tx_buffer[0],(uint8_t*)&Cmd,sizeof(Cmd));
 //
 //	param = CharReverse16(parameter1);
 //	memcpy(&tx_buffer[2],(uint8_t*)&param,sizeof(parameter1));

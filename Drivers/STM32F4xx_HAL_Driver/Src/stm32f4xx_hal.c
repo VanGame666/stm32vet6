@@ -362,6 +362,7 @@ HAL_StatusTypeDef HAL_SetTickFreq(HAL_TickFreqTypeDef Freq)
       uwTickFreq = prevTickFreq;
     }
   }
+
   return status;
 }
 

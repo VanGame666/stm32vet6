@@ -6,11 +6,13 @@
 #endif
 
 #include "usart.h"
+#include "spi.h"
 #include "SoftwareCRC.h"
 
 #define BUF_SIZE 128
 #define CMD_SEND(command, ...) CMD_Send(command,##__VA_ARGS__, 0xFFFF)
-#define FRAME_SEND_USART huart1
+#define URTSEND huart1
+#define SPISEND hspi2
 
 
 extern uint8_t rx_buffer[BUF_SIZE];
@@ -26,36 +28,31 @@ typedef struct{
 	uint16_t addr;
 	uint16_t addr_num;
 	uint16_t crc16;
-}PC_Conect_t;
-extern PC_Conect_t pc_connect;
+}PConectTypeDef;
+extern PConectTypeDef PConect;
 
 /* Dacai screen control command */
 typedef enum{
 	 ReadButtonStatus = 0xB111,
 	 SetButtonStatus = 0xB110,
 	 SwitchScreen = 0xB100,
-}Cmd_t;
-extern Cmd_t cmd;
+}CmdTypeDef;
+extern CmdTypeDef Cmd;
 
+typedef enum{
+	UART,
+	SPI,
+	IIC
+}SendSlectTypeDef;
+extern SendSlectTypeDef SendSlect;
 
-
-
-
-
-
-
-void pc_rx_process(void);
 void instruction_decode(void);
 void instruction_code(void);
 
-//void CMD_ReadScreen(void);
-//void CMD_SwitchScreen(uint16_t parameter);
-//void CMD_ReadButtonStatus(uint16_t parameter1,uint16_t parameter2);
-//void CMD_ReadButtonStatus_Improve(uint16_t command, ...);
-
-extern void CMD_Send(uint16_t command, ...);
 
 
+extern void DacaiSend(uint16_t command, ...);
+extern void DDSend(uint8_t enable,uint32_t frequecy,uint8_t channel, float phase);
 void PConectProcess(void);
 
 

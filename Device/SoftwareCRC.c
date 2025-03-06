@@ -24,7 +24,7 @@ uint16_t BitReverse16(uint16_t data)
 
 uint32_t CharReverse32 (uint32_t data)
 {
-	return (data & 0x000000ff) << 24 | (data & 0x0000ff00) << 8 | (data & 0x00ff0000) >> 8 | (data & 0xff000000 >> 24);
+	return ((data & 0x000000ff) << 24 | (data & 0x0000ff00) << 8 | (data & 0x00ff0000) >> 8 | (data & 0xff000000) >> 24);
 }
 
 uint16_t CharReverse16 (uint16_t data)
@@ -80,4 +80,16 @@ uint16_t ModBusCRC16(uint8_t *data, uint16_t len)
     return CRC16;
 }
 
+
+uint8_t CheckSum8(uint8_t *data, uint16_t len)
+{
+    uint32_t SUM = 0;
+
+    for (int i = 0; i < len; i++)
+    {
+    	SUM = SUM + data[i];
+    }
+
+    return SUM & 0x000000FF;
+}
 

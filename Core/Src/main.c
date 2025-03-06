@@ -21,6 +21,7 @@
 #include "crc.h"
 #include "dma.h"
 #include "i2c.h"
+#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -53,7 +54,7 @@
 uint8_t key_flag = 0;
 uint8_t uart_flag = 0;
 
-extern PC_Conect_t pc_connect;
+extern PConectTypeDef PConect;
 
 
 /* USER CODE END PV */
@@ -138,6 +139,7 @@ int main(void)
   MX_I2C1_Init();
   MX_CRC_Init();
   MX_USART6_UART_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1,rx_buffer,BUF_SIZE);
 
@@ -176,6 +178,7 @@ int main(void)
 
 	  if(key_flag == 1)
 	  {
+		  DDSend(1,1000000,6,150);
 		  key_flag = 0;
 	  }
     /* USER CODE END WHILE */
